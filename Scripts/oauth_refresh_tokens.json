@@ -1,0 +1,8 @@
+{ 
+    "_id" : ObjectId("56e5b09015fa03fcc06b0bac"), 
+    "refresh_token" : "", 
+    "client_id" : "", 
+    "user_id" : "", 
+    "expires" : Timestamp(0, 0), 
+    "scope" : ""
+}

@@ -1,0 +1,9 @@
+{ 
+    "_id" : ObjectId("56e5b03615fa03fcc06b0baa"), 
+    "authorization_code" : "", 
+    "client_id" : "", 
+    "user_id" : "", 
+    "redirect_uri" : "", 
+    "expires" : Timestamp(0, 0), 
+    "scope" : ""
+}
