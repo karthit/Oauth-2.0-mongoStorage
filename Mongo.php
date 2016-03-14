@@ -1,14 +1,16 @@
 <?php
-class MongoTest
+class Mongo
 {
 	protected $db;
 	protected $config;
 	protected $query;
+	protected $dbName;
 	
 	public function __construct($connection, $config = array())
 	{
-		$this->db = new MongoDB\Driver\Manager("mongodb://localhost:27017/oauth");
-	
+		$this->dbName = $connection['database'];
+		$con_str = 'mongodb://'.$connection['host'].':'.$connection['port'].'/'.$this->dbName;
+		$this->db = new MongoDB\Driver\Manager($con_str);
 		$this->config = array_merge(array(
 			'client_table' => 'oauth_clients',
 			'access_token_table' => 'oauth_access_tokens',
@@ -19,14 +21,13 @@ class MongoTest
 		), $config);
 	}
 	
-	public  function checkClientCredentials($client_id,$client_secret = null)
+	public function checkClientCredentials($client_id,$client_secret = null)
 	{
 		$filter = array('client_id' => $client_id);
 		$query = new MongoDB\Driver\Query($filter);
-		if($result = $this->db->executeQuery('oauth.oauth_clients', $query)){ 
+		if($result = $this->db->executeQuery($this->dbName.'.oauth_clients', $query)){ 
 			$result = $result->toArray();
 			return $result[0]->client_secret == $client_secret;
-			
 		}
 		return false;
 	}
@@ -35,7 +36,7 @@ class MongoTest
 	{
 		$filter = array("client_id"=>$client_id);
 		$query = new MongoDB\Driver\Query($filter);
-		if(!$result = $this->db->executeQuery('oauth.oauth_clients',$query)){
+		if(!$result = $this->db->executeQuery($this->dbName.'.oauth_clients',$query)){
 			return false;
 		}
 		$result = $result->toArray();
@@ -46,7 +47,7 @@ class MongoTest
 	{
 		$filter = array("client_id"=>$client_id);
 		$query = new MongoDB\Driver\Query($filter);
-		$result = $this->db->executeQuery('oauth.oauth_clients',$query);
+		$result = $this->db->executeQuery($this->dbName.'.oauth_clients',$query);
 		$result = $result->toArray();
 		
 		return $result == null ? false : $result[0];
@@ -67,7 +68,7 @@ class MongoTest
                 ))
 			);
 			$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
-			$result = $this->db->executeBulkWrite('oauth.oauth_clients', $bulk, $writeConcern);						
+			$result = $this->db->executeBulkWrite($this->dbName.'.oauth_clients', $bulk, $writeConcern);						
 		}
 		else {
 			$bulk = new MongoDB\Driver\BulkWrite;
@@ -81,7 +82,7 @@ class MongoTest
 			);
 			$bulk->insert($client);
 			$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
-			$result = $this->db->executeBulkWrite('oauth.oauth_clients', $bulk, 	$writeConcern);
+			$result = $this->db->executeBulkWrite($this->dbName.'.oauth_clients', $bulk, 	$writeConcern);
 
 		}
 		return true;
@@ -101,7 +102,7 @@ class MongoTest
 	{
 		$filter = array("access_token"=>$access_token);
 		$query = new MongoDB\Driver\Query($filter);
-		$result = $this->db->executeQuery('oauth.oauth_access_tokens',$query);
+		$result = $this->db->executeQuery($this->dbName.'.oauth_access_tokens',$query);
 		$result = $result->toArray();
 		
 		return $result == null ? false : $result[0];
@@ -121,7 +122,7 @@ class MongoTest
                 ))
 			);
 			$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
-			$result = $this->db->executeBulkWrite('oauth.oauth_access_tokens', $bulk, $writeConcern);
+			$result = $this->db->executeBulkWrite($this->dbName.'.oauth_access_tokens', $bulk, $writeConcern);
 		} 
 		else {
 			$bulk = new MongoDB\Driver\BulkWrite;
@@ -134,7 +135,7 @@ class MongoTest
 			);
 			$bulk->insert($token);
 			$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
-			$result = $this->db->executeBulkWrite('oauth.oauth_access_tokens', $bulk, 	$writeConcern);
+			$result = $this->db->executeBulkWrite($this->dbName.'.oauth_access_tokens', $bulk, 	$writeConcern);
 		}
 		return true;
 	}
@@ -145,14 +146,14 @@ class MongoTest
 		$bulk->delete(array('access_token'=>$access_token));
 		
 		$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
-		$result = $this->db->executeBulkWrite('oauth.oauth_access_tokens', $bulk, $writeConcern);
+		$result = $this->db->executeBulkWrite($this->dbName.'.oauth_access_tokens', $bulk, $writeConcern);
 	}
 	
 	public function getAuthorizationCode($code)
 	{
 		$filter = array("authorization_code"=>$code);
 		$query = new MongoDB\Driver\Query($filter);
-		$result = $this->db->executeQuery('oauth.oauth_authorization_codes',$query);
+		$result = $this->db->executeQuery($this->dbName.'.oauth_authorization_codes',$query);
 		$result = $result->toArray();
 		
 		return $result == null ? false : $result[0];
@@ -174,7 +175,7 @@ class MongoTest
                 ))
 			);
 			$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
-			$result = $this->db->executeBulkWrite('oauth.oauth_authorization_codes', $bulk, $writeConcern);
+			$result = $this->db->executeBulkWrite($this->dbName.'.oauth_authorization_codes', $bulk, $writeConcern);
 		}
 		else {
 			$bulk = new MongoDB\Driver\BulkWrite;
@@ -189,7 +190,7 @@ class MongoTest
             );
 			$bulk->insert($token);
 			$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
-			$result = $this->db->executeBulkWrite('oauth.oauth_authorization_codes', $bulk, $writeConcern);
+			$result = $this->db->executeBulkWrite($this->dbName.'.oauth_authorization_codes', $bulk, $writeConcern);
 		}
 		return true;
 	}
@@ -200,7 +201,7 @@ class MongoTest
 		$bulk->delete(array('authorization_code'=>$code));
 		
 		$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
-		$result = $this->db->executeBulkWrite('oauth.oauth_authorization_codes', $bulk, $writeConcern);
+		$result = $this->db->executeBulkWrite($this->dbName.'.oauth_authorization_codes', $bulk, $writeConcern);
 	}
 	
 	public function checkUserCredentials($username,$password) 
@@ -223,7 +224,7 @@ class MongoTest
 	{
 		$filter = array('refresh_token' => $refresh_token);
 		$query = new MongoDB\Driver\Query($filter);
-		$result = $this->db->executeQuery('oauth.oauth_refresh_tokens',$query);
+		$result = $this->db->executeQuery($this->dbName.'.oauth_refresh_tokens',$query);
 		$result = $result->toArray();
 		
 		return $result == null ? false : $result[0];
@@ -241,7 +242,7 @@ class MongoTest
         );
 		$bulk->insert($token);
 		$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
-		$result = $this->db->executeBulkWrite('oauth.oauth_refresh_tokens', $bulk, $writeConcern);
+		$result = $this->db->executeBulkWrite($this->dbName.'.oauth_refresh_tokens', $bulk, $writeConcern);
 		return true;
 	}
 	
@@ -251,7 +252,7 @@ class MongoTest
 		$bulk->delete(array('refresh_token' => $refresh_token));
 		
 		$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
-		$result = $this->db->executeBulkWrite('oauth.oauth_refresh_tokens', $bulk, $writeConcern);
+		$result = $this->db->executeBulkWrite($this->dbName.'.oauth_refresh_tokens', $bulk, $writeConcern);
 	}
 	
 	protected function checkPassword($user,$password)
@@ -263,7 +264,7 @@ class MongoTest
 	{
 		$filter = array('username' => $username);
 		$query = new MongoDB\Driver\Query($filter);
-		$result = $this->db->executeQuery('oauth.oauth_users',$query);
+		$result = $this->db->executeQuery($this->dbName.'.oauth_users',$query);
 		$result = $result->toArray();
 		
 		return $result == null ? false : $result[0];
@@ -282,7 +283,7 @@ class MongoTest
                 ))
 			);
 			$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
-			$result = $this->db->executeBulkWrite('oauth.oauth_users', $bulk, $writeConcern);
+			$result = $this->db->executeBulkWrite($this->dbName.'.oauth_users', $bulk, $writeConcern);
 		}
 		else{
 			$bulk = new MongoDB\Driver\BulkWrite;
@@ -294,7 +295,7 @@ class MongoTest
             );
 			$bulk->insert($token);
 			$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
-			$result = $this->db->executeBulkWrite('oauth.oauth_users', $bulk, $writeConcern);
+			$result = $this->db->executeBulkWrite($this->dbName.'.oauth_users', $bulk, $writeConcern);
 		}
 		return true;
 	}
@@ -306,7 +307,7 @@ class MongoTest
             'subject' => $subject
         );
 		$query = new MongoDB\Driver\Query($filter);
-		$result = $this->db->executeQuery('oauth.oauth_jwt',$query);
+		$result = $this->db->executeQuery($this->dbName.'.oauth_jwt',$query);
 		$result = $result->toArray();
 		
 		return $result == null ? false : $result[0]->public_key;
@@ -326,7 +327,7 @@ class MongoTest
 	}	
 		
 	public function getJti($client_id,$subject,$audience,$expiration,$jti)
-	{
+	{ 	
 		//need to be implemented
 		return false;
 	}
