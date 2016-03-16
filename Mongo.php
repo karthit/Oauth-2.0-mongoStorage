@@ -3,7 +3,8 @@ namespace OAuth2\Storage;
 
 use OAuth2\OpenID\Storage\AuthorizationCodeInterface as OpenIDAuthorizationCodeInterface;
 
-class Mongo implements AuthorizationCodeInterface,
+class Mongo implements ClientCredentialsInterface,
+	AuthorizationCodeInterface,
     AccessTokenInterface,
     UserCredentialsInterface,
     RefreshTokenInterface,
@@ -41,7 +42,7 @@ class Mongo implements AuthorizationCodeInterface,
 		return false;
 	}
 	
-	public function isPubliClient($client_id)
+	public function isPublicClient($client_id)
 	{
 		$filter = array("client_id"=>$client_id);
 		$query = new \MongoDB\Driver\Query($filter);
