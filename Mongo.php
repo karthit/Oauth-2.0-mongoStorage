@@ -1,5 +1,14 @@
 <?php
-class Mongo
+namespace OAuth2\Storage;
+
+use OAuth2\OpenID\Storage\AuthorizationCodeInterface as OpenIDAuthorizationCodeInterface;
+
+class Mongo implements AuthorizationCodeInterface,
+    AccessTokenInterface,
+    UserCredentialsInterface,
+    RefreshTokenInterface,
+    JwtBearerInterface,
+    OpenIDAuthorizationCodeInterface
 {
 	protected $db;
 	protected $config;
@@ -10,7 +19,7 @@ class Mongo
 	{
 		$this->dbName = $connection['database'];
 		$con_str = 'mongodb://'.$connection['host'].':'.$connection['port'].'/'.$this->dbName;
-		$this->db = new MongoDB\Driver\Manager($con_str);
+		$this->db = new \MongoDB\Driver\Manager($con_str);
 		$this->config = array_merge(array(
 			'client_table' => 'oauth_clients',
 			'access_token_table' => 'oauth_access_tokens',
@@ -24,7 +33,7 @@ class Mongo
 	public function checkClientCredentials($client_id,$client_secret = null)
 	{
 		$filter = array('client_id' => $client_id);
-		$query = new MongoDB\Driver\Query($filter);
+		$query = new \MongoDB\Driver\Query($filter);
 		if($result = $this->db->executeQuery($this->dbName.'.oauth_clients', $query)){ 
 			$result = $result->toArray();
 			return $result[0]->client_secret == $client_secret;
@@ -35,7 +44,7 @@ class Mongo
 	public function isPubliClient($client_id)
 	{
 		$filter = array("client_id"=>$client_id);
-		$query = new MongoDB\Driver\Query($filter);
+		$query = new \MongoDB\Driver\Query($filter);
 		if(!$result = $this->db->executeQuery($this->dbName.'.oauth_clients',$query)){
 			return false;
 		}
@@ -46,7 +55,7 @@ class Mongo
 	public function getClientDetails($client_id)
 	{
 		$filter = array("client_id"=>$client_id);
-		$query = new MongoDB\Driver\Query($filter);
+		$query = new \MongoDB\Driver\Query($filter);
 		$result = $this->db->executeQuery($this->dbName.'.oauth_clients',$query);
 		$result = $result->toArray();
 		
@@ -56,7 +65,7 @@ class Mongo
 	public function setClientDetails($client_id,$client_secret=null,$redirect_uri=null,$grant_types = null,$scope=null,$user_id = null)
 	{
 		if($this->getClientDetails($client_id)){
-			$bulk = new MongoDB\Driver\BulkWrite;
+			$bulk = new \MongoDB\Driver\BulkWrite;
 			$bulk->update(
 				 array('client_id' => $client_id),
 				 array('$set' => array(
@@ -67,11 +76,11 @@ class Mongo
                     'user_id'       => $user_id,
                 ))
 			);
-			$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
+			$writeConcern = null;
 			$result = $this->db->executeBulkWrite($this->dbName.'.oauth_clients', $bulk, $writeConcern);						
 		}
 		else {
-			$bulk = new MongoDB\Driver\BulkWrite;
+			$bulk = new \MongoDB\Driver\BulkWrite;
 			$client = array(
 				'client_id' => $client_id,
 				'client_secret' => $client_secret,
@@ -81,9 +90,8 @@ class Mongo
 				'user_id' => $user_id,
 			);
 			$bulk->insert($client);
-			$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
+			$writeConcern = null;
 			$result = $this->db->executeBulkWrite($this->dbName.'.oauth_clients', $bulk, 	$writeConcern);
-
 		}
 		return true;
 	}
@@ -101,7 +109,7 @@ class Mongo
 	public function getAccessToken($access_token)
 	{
 		$filter = array("access_token"=>$access_token);
-		$query = new MongoDB\Driver\Query($filter);
+		$query = new \MongoDB\Driver\Query($filter);
 		$result = $this->db->executeQuery($this->dbName.'.oauth_access_tokens',$query);
 		$result = $result->toArray();
 		
@@ -111,7 +119,7 @@ class Mongo
 	public function setAccessToken($access_token,$client_id,$user_id,$expires,$scope = null)
 	{	
 		if($this->getAccessToken($access_token)){
-			$bulk = new MongoDB\Driver\BulkWrite;
+			$bulk = new \MongoDB\Driver\BulkWrite;
 			$bulk->update(
 				 array('access_token' => $access_token),
 				 array('$set' => array(
@@ -121,11 +129,11 @@ class Mongo
                     'scope' => $scope
                 ))
 			);
-			$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
+			$writeConcern = null;
 			$result = $this->db->executeBulkWrite($this->dbName.'.oauth_access_tokens', $bulk, $writeConcern);
 		} 
 		else {
-			$bulk = new MongoDB\Driver\BulkWrite;
+			$bulk = new \MongoDB\Driver\BulkWrite;
 			$token = array(
 				'access_token' => $access_token,
 				'client_id' => $client_id,
@@ -134,7 +142,7 @@ class Mongo
 				'scope' => $scope
 			);
 			$bulk->insert($token);
-			$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
+			$writeConcern = null;
 			$result = $this->db->executeBulkWrite($this->dbName.'.oauth_access_tokens', $bulk, 	$writeConcern);
 		}
 		return true;
@@ -142,17 +150,17 @@ class Mongo
 	
 	public function unsetAccessToken($access_token)
 	{
-		$bulk = new MongoDB\Driver\BulkWrite;
+		$bulk = new \MongoDB\Driver\BulkWrite;
 		$bulk->delete(array('access_token'=>$access_token));
 		
-		$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
+		$writeConcern = null;
 		$result = $this->db->executeBulkWrite($this->dbName.'.oauth_access_tokens', $bulk, $writeConcern);
 	}
 	
 	public function getAuthorizationCode($code)
 	{
 		$filter = array("authorization_code"=>$code);
-		$query = new MongoDB\Driver\Query($filter);
+		$query = new \MongoDB\Driver\Query($filter);
 		$result = $this->db->executeQuery($this->dbName.'.oauth_authorization_codes',$query);
 		$result = $result->toArray();
 		
@@ -162,7 +170,7 @@ class Mongo
 	public function setAuthorizationCode($code,$client_id,$user_id,$redirect_uri,$expires,$scope=null,$id_token=null)
 	{
 		if($this->getAuthorizationCode($code)){
-			$bulk = new MongoDB\Driver\BulkWrite;
+			$bulk = new \MongoDB\Driver\BulkWrite;
 			$bulk->update(
 				 array('authorization_code' => $code),
                  array('$set' => array(
@@ -174,11 +182,11 @@ class Mongo
                     'id_token' => $id_token,
                 ))
 			);
-			$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
+			$writeConcern = null;
 			$result = $this->db->executeBulkWrite($this->dbName.'.oauth_authorization_codes', $bulk, $writeConcern);
 		}
 		else {
-			$bulk = new MongoDB\Driver\BulkWrite;
+			$bulk = new \MongoDB\Driver\BulkWrite;
 			$token = array(
                 'authorization_code' => $code,
                 'client_id' => $client_id,
@@ -189,7 +197,7 @@ class Mongo
                 'id_token' => $id_token,
             );
 			$bulk->insert($token);
-			$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
+			$writeConcern = null;
 			$result = $this->db->executeBulkWrite($this->dbName.'.oauth_authorization_codes', $bulk, $writeConcern);
 		}
 		return true;
@@ -197,10 +205,10 @@ class Mongo
 	
 	public function expireAuthorizationCode($code)
 	{
-		$bulk = new MongoDB\Driver\BulkWrite;
+		$bulk = new \MongoDB\Driver\BulkWrite;
 		$bulk->delete(array('authorization_code'=>$code));
 		
-		$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
+		$writeConcern = null;
 		$result = $this->db->executeBulkWrite($this->dbName.'.oauth_authorization_codes', $bulk, $writeConcern);
 	}
 	
@@ -223,7 +231,7 @@ class Mongo
 	public function getRefreshToken($refresh_token)
 	{
 		$filter = array('refresh_token' => $refresh_token);
-		$query = new MongoDB\Driver\Query($filter);
+		$query = new \MongoDB\Driver\Query($filter);
 		$result = $this->db->executeQuery($this->dbName.'.oauth_refresh_tokens',$query);
 		$result = $result->toArray();
 		
@@ -232,7 +240,7 @@ class Mongo
 	
 	public function setRefreshToken($refresh_token,$client_id,$user_id,$expires,$scope=null)
 	{
-		$bulk = new MongoDB\Driver\BulkWrite;
+		$bulk = new \MongoDB\Driver\BulkWrite;
 		$token = array(
             'refresh_token' => $refresh_token,
             'client_id' => $client_id,
@@ -241,17 +249,17 @@ class Mongo
             'scope' => $scope
         );
 		$bulk->insert($token);
-		$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
+		$writeConcern = null;
 		$result = $this->db->executeBulkWrite($this->dbName.'.oauth_refresh_tokens', $bulk, $writeConcern);
 		return true;
 	}
 	
 	public function unsetRefreshToken($refresh_token)
 	{
-		$bulk = new MongoDB\Driver\BulkWrite;
+		$bulk = new \MongoDB\Driver\BulkWrite;
 		$bulk->delete(array('refresh_token' => $refresh_token));
 		
-		$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
+		$writeConcern = null;
 		$result = $this->db->executeBulkWrite($this->dbName.'.oauth_refresh_tokens', $bulk, $writeConcern);
 	}
 	
@@ -263,7 +271,7 @@ class Mongo
 	public function getUser($username)
 	{
 		$filter = array('username' => $username);
-		$query = new MongoDB\Driver\Query($filter);
+		$query = new \MongoDB\Driver\Query($filter);
 		$result = $this->db->executeQuery($this->dbName.'.oauth_users',$query);
 		$result = $result->toArray();
 		
@@ -273,7 +281,7 @@ class Mongo
 	public function setUser($username,$password,$firstName=null,$lastName=null)
 	{
 		if($this->getUser($username)){
-			$bulk = new MongoDB\Driver\BulkWrite;
+			$bulk = new \MongoDB\Driver\BulkWrite;
 			$bulk->update(
 				 array('username' => $username),
                 array('$set' => array(
@@ -282,11 +290,11 @@ class Mongo
                     'last_name' => $lastName
                 ))
 			);
-			$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
+			$writeConcern = null;
 			$result = $this->db->executeBulkWrite($this->dbName.'.oauth_users', $bulk, $writeConcern);
 		}
 		else{
-			$bulk = new MongoDB\Driver\BulkWrite;
+			$bulk = new \MongoDB\Driver\BulkWrite;
 			$token = array(
                 'username' => $username,
                 'password' => $password,
@@ -294,7 +302,7 @@ class Mongo
                 'last_name' => $lastName
             );
 			$bulk->insert($token);
-			$writeConcern = new MongoDB\Driver\WriteConcern(MongoDB\Driver\WriteConcern::MAJORITY, 1000);
+			$writeConcern = null;
 			$result = $this->db->executeBulkWrite($this->dbName.'.oauth_users', $bulk, $writeConcern);
 		}
 		return true;
@@ -306,7 +314,7 @@ class Mongo
             'client_id' => $client_id,
             'subject' => $subject
         );
-		$query = new MongoDB\Driver\Query($filter);
+		$query = new \MongoDB\Driver\Query($filter);
 		$result = $this->db->executeQuery($this->dbName.'.oauth_jwt',$query);
 		$result = $result->toArray();
 		
@@ -318,11 +326,9 @@ class Mongo
 		 if (!$clientDetails = $this->getClientDetails($client_id)) {
             return false;
         }
-
         if (isset($clientDetails->scope)) {
             return $clientDetails->scope;
         }
-
         return null;
 	}	
 		
